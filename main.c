@@ -96,12 +96,25 @@ int parse_cmd(char * input) {
 int edit_file(FILE * p_note_f, FILE * s_note_f, int buf_dist, int buf_u, int buf_name, struct user * u) {
 
     char in[BUF_CMD];
+    int second_start;
+    int prim_len;
+
+    // copy rest of file into secondary file 
+    char c = fgetc(p_note_f);
+    while (c != EOF) {
+        fputc(c, s_note_f);
+        c = fgetc(p_note_f);
+    }
     
 
     // first need to travel to point in primary notes
     int num_read;
     int num_write = 0;
     int total_write = 0;
+
+    // get length of p_note_f
+    fseek(p_note_f, 0, SEEK_END);
+    prim_len = ftell(p_note_f);
 
     // reset both to 0
     fseek(p_note_f, 0, SEEK_SET);
@@ -122,15 +135,9 @@ int edit_file(FILE * p_note_f, FILE * s_note_f, int buf_dist, int buf_u, int buf
         e("error reading user old data");
     }
 
-    char new_notes[MAX_NAME - (strlen(u->data)-1)];
+    char new_notes[MAX_DATA - (strlen(u->data))];
+    second_start = ftell(p_note_f);
 
-
-    // copy rest of file into secondary file 
-    char c = fgetc(p_note_f);
-    while (c != EOF) {
-        fputc(c, s_note_f);
-        c = fgetc(p_note_f);
-    }
 
     // print menu. 
     print_opt();
@@ -164,8 +171,12 @@ int edit_file(FILE * p_note_f, FILE * s_note_f, int buf_dist, int buf_u, int buf
                 fprintf(stdout, "\n");
 
                 fflush(stdout);
+                
+                int len_read1 = sizeof(new_notes);
+                int len_read2 = strlen(new_notes);
+                int len_read3 = strlen(u->data);
 
-                num_read = read(STDIN_FILENO, new_notes, sizeof(new_notes) - (strlen(new_notes)+1));
+                num_read = read(STDIN_FILENO, new_notes, sizeof(new_notes) - strlen(new_notes));
                 new_notes[num_read] = '\0';
                 
                 strncat(u->data, new_notes, sizeof(u->data)-strlen(u->data));
@@ -184,27 +195,38 @@ int edit_file(FILE * p_note_f, FILE * s_note_f, int buf_dist, int buf_u, int buf
                 // to the old notes start
                 fseek(p_note_f, buf_dist, SEEK_SET);
 
+                
                 // write name
-                num_write = fwrite(u->name, sizeof(char), strlen(u->name)+1, p_note_f);
-                if (num_write != strlen(u->name) + 1) {
+                num_write = fwrite(u->name, sizeof(char), strlen(u->name), p_note_f);
+                if (num_write != strlen(u->name)) {
                     e("Error rewriting name to file");
                 }
+                total_write += num_write;
 
                 // write data
-                num_write = fwrite(u->data, sizeof(char), strlen(u->data)+1, p_note_f);
-                if (num_write != (strlen(u->data) +strlen(u->name) + 2)) {
-                    e("Error rewriting notes to file");
-                }
+                num_write = fwrite(u->data, sizeof(char), strlen(u->data), p_note_f);
+                // if (num_write != (strlen(u->data) +strlen(u->name) + 2)) {
+                //     e("Error rewriting notes to file");
+                // }
+                total_write += num_write;
 
-                // copy old notes from s_notes to p_notes
-                // copy rest of file into secondary file 
-                char c = fgetc(s_note_f);
-                while (c != EOF) {
-                    fputc(c, p_note_f);
-                    c = fgetc(s_note_f);
-                }
+                // // copy old notes from s_notes to p_notes
+                // // copy rest of file into secondary file 
+                // char c = fgetc(s_note_f);
+                // while (c != EOF) {
+                //     fputc(c, p_note_f);
+                //     c = fgetc(s_note_f);
+                // }
+                fseek(s_note_f, second_start, SEEK_SET);
 
-                return num_write;
+                char second_notes[prim_len - second_start];
+
+                num_read = fread(second_notes, sizeof(char), sizeof(second_notes), s_note_f);
+                
+                fwrite(second_notes, sizeof(char), sizeof(second_notes), p_note_f);
+
+
+                return total_write;
             }
             else {
                 return 0;
@@ -223,6 +245,7 @@ int main (int argc, char ** argv) {
     // variables 
     //char buf[2];
 
+    int fd[3]; // 0- notes, 1- s_notes, 2- data
 
     // usage ./a.out [uname] 
 
@@ -232,18 +255,22 @@ int main (int argc, char ** argv) {
         e("Usage: ./main");
     } 
 
-    // open file 
-    // int data_fd;
+    // open files
+    if ((fd[2] = open("./data", O_CREAT) == -1) || 
+            (fd[1] = open("./s_notes", O_CREAT) == -1) || 
+            (fd[0] = open("./notes", O_CREAT) == -1)) {
+        e("error creating file/s");
+    }
     FILE * data_f;
-    data_f = fopen("./data", "ab+");
+    data_f = fopen("./data", "r+");
     if (data_f == NULL){
         // file no exist or cant open
-        e("error opening/creating file");
+        e("error opening file");
     }
 
     // open notes file
     FILE * p_note_f;
-    p_note_f = fopen("./notes", "ab+");
+    p_note_f = fopen("./notes", "r+");
     if (p_note_f == NULL){
         // file no exist or cant open
         e("error opening/creating file");
@@ -251,7 +278,7 @@ int main (int argc, char ** argv) {
 
     // open secondary file
     FILE * s_note_f;
-    s_note_f = fopen("./s_notes", "ab+");
+    s_note_f = fopen("./s_notes", "r+");
     if (s_note_f == NULL){
         // file no exist or cant open
         e("error opening/creating file");
@@ -268,6 +295,10 @@ int main (int argc, char ** argv) {
     int buf_name = 0;
     int buf_new = 0;
     int num_usr = 0;
+
+    int temp_tell = 0;
+    int found = 0;
+
 
     fprintf(stdout, "Please enter a user name (max 19 characters): ");
     fflush(stdout);
@@ -314,7 +345,6 @@ int main (int argc, char ** argv) {
     } else { // already exists 
 
         
-        int found = 0;
         
 
 
@@ -327,10 +357,11 @@ int main (int argc, char ** argv) {
             if (strcmp(temp->name, u->name) == 0) {
                 found = 1;
                 buf_u = temp->buf;
-                buf_name = strlen(temp->name) + 1;
+                buf_name = strlen(temp->name);
                 break;
             }
             else {
+                temp_tell++;
                 buf_dist += temp->buf;
             }
         }
@@ -366,7 +397,10 @@ int main (int argc, char ** argv) {
 
             buf_new = edit_file(p_note_f, s_note_f, buf_dist, buf_u, buf_name, u);
 
-            temp->buf = buf_new;
+            if (buf_new != 0){ 
+                temp->buf = buf_new;
+            }
+            
 
         }
 
@@ -374,7 +408,16 @@ int main (int argc, char ** argv) {
        
 
     }
-    if (temp->buf > 0) {
+
+    if (!found) {
+        fseek(data_f, 0, SEEK_END);
+        strcpy(temp->name, u->name);
+    }
+    else {
+        fseek(data_f, sizeof(int) + (temp_tell * sizeof(struct user_data)), SEEK_SET);
+    }
+    
+    if (buf_new > 0) {
         // wwrite to data file
         num_write = fwrite(temp, sizeof(struct user_data), 1, data_f);
         // if (num_write != sizeof(struct user_data)) {

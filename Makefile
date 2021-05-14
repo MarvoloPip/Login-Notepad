@@ -1,12 +1,15 @@
 CFLAGS = -g -Wall -std=gnu99
+FILES = notes s_notes data
 all: main
 
 main: main.c
 	gcc ${CFLAGS} -o $@ $^
+	touch ${FILES}
 
 clean:
 	rm -f main
 	
 hard_clean: 
-	rm -f main notes data
+	rm -f main notes data s_notes
+
 
