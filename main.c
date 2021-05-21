@@ -13,11 +13,16 @@
 
 #define MAX_DATA 2048
 #define MAX_NAME 20
+#define MAX_IP 10
 #define BUF_CMD 10
 
 #define VIEW 0
 #define ADD 1
 #define QUIT 2
+
+#ifndef PORT
+  #define PORT 55555
+#endif
 
 /*
 
@@ -258,7 +263,7 @@ int main (int argc, char ** argv) {
     // open files
     if ((fd[2] = open("./data", O_CREAT) == -1) || 
             (fd[1] = open("./s_notes", O_CREAT) == -1) || 
-            (fd[0] = open("./notes", O_CREAT) == -1)) {
+            (fd[0] = open("./note", O_CREAT) == -1)) {
         e("error creating file/s");
     }
     FILE * data_f;
@@ -270,7 +275,7 @@ int main (int argc, char ** argv) {
 
     // open notes file
     FILE * p_note_f;
-    p_note_f = fopen("./notes", "r+");
+    p_note_f = fopen("./note", "r+");
     if (p_note_f == NULL){
         // file no exist or cant open
         e("error opening/creating file");
@@ -431,7 +436,286 @@ int main (int argc, char ** argv) {
     free(temp);
     fclose(p_note_f);
     fclose(s_note_f);
-        
+
+    // calling update
+    
+    return 0;
 
 }
 
+// function that handles updating the top 10 ips in config.txt
+void server_bizness() {
+
+    int num_ip = 0; 
+    int port = PORT;
+    char buf[BUF_CMD];
+    
+    // tdodo
+    // set up server
+    int note_client;
+    int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fd < 0) {
+        perror("server socket:");
+        e("");
+    }
+
+    fprintf(stdout, "which port do you want to use to update your notes? (default = 55555)\n");
+    fflush(stdout);
+
+    int num_read = read(STDIN_FILENO, buf, BUF_CMD);
+
+    port = atoi(buf);
+
+    // Set information about the port (and IP) we want to be connected to.
+    struct sockaddr_in server, client;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    server.sin_addr.s_addr = INADDR_ANY;
+
+    // This sets an option on the socket so that its port can be reused right
+    // away. Since we are likely to run, stop, edit, compile and rerun your
+    // server fairly quickly, this will mean you can reuse the same port.
+    int on = 1;
+    int status = setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
+    if (status == -1) {
+        perror("setsockopt -- REUSEADDR");
+    }
+
+    // This should always be zero. On some systems, it won't error if you
+    // forget, but on others, you'll get mysterious errors. So zero it.
+    memset(&server.sin_zero, 0, 8);
+
+    // Bind the selected port to the socket.
+    if (bind(sock_fd, (struct sockaddr *)&server, sizeof(server)) < 0) {
+        perror("server: bind");
+        close(sock_fd);
+        e("");
+    }
+
+    // Announce willingness to accept connections on this socket.
+    if (listen(sock_fd, MAX_IP) < 0) {
+        perror("server: listen");
+        close(sock_fd);
+        e("");
+    }
+
+    // dont need to use select for the server side because we are not 
+    // reading from any of the ips but we will use it on the socket
+
+    int max_fd = sock_fd;
+    fd_set all;
+    FD_ZERO(&all);
+    FD_SET(sock_fd, &all);
+    fd_set all_cpy = all;
+
+    if (select(max_fd+1, &all_cpy, NULL, NULL, NULL) == -1) {
+        perror("server: select");
+        e("");
+    }
+    
+    // an ip wants to connect
+     
+    int c_size = sizeof(client); 
+    if (FD_ISSET(sock_fd, &all_cpy)) {
+
+        note_client = accept(sock_fd, (struct sockaddr*)&client, &c_size);
+        if (note_client > 0) {
+            fprintf(stdout, "Accepted the note-taking client\n");
+        
+            if (note_client > sock_fd) {
+                max_fd = note_client;
+            }
+            
+            FD_SET(note_client, &all);
+
+            all_cpy = all;
+
+            conduct_bizness(sock_fd, max_fd, note_client, all);
+
+        } 
+
+    }
+
+
+
+    // connect to client
+
+    // copy main file
+    // copy notes 
+    // copy data
+
+    // strat;
+    // give servre 
+    // 4 byte file name indicator
+    // sizeof(int) size of file/bytes to allocate
+    // send those bytes
+
+    fprinttf(stdout, "Updating %d number of Machines", num_ip);
+
+
+}
+
+// conduct business with the client. Client will be sending the following 2 times
+//  
+// sizeof(int) size of file/bytes to allocate
+// those bytes
+//
+//  for the three files (in this order): data,note,
+void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
+
+    fd_set all_cpy = all;
+    int num_read = 0, num_write = 0;
+    int num_bytes;
+
+    char buf[BUF_CMD];
+    char * data_buf = NULL;
+    char * note_buf = NULL;
+
+    if (select(max_fd+1, &all_cpy, NULL, NULL, NULL) == -1) {
+        perror("server: select");
+        e("");
+    }
+
+        
+    // create ze files     
+
+    // the data file
+    FILE * data_f = fopen("./data", "wb+");
+    if (data_f == NULL) {
+        e("problems with data file");
+    } 
+
+    // the note file
+    FILE * p_note_f = fopen("./note", "wb+");
+    if (p_note_f == NULL) {
+        e("problems with note file");
+    }
+
+
+    // client ready to sned over the goodies
+    if (FD_ISSET(note_client, &all_cpy)) {
+
+
+        // read int
+        num_read = read(sock_fd, buf, BUF_CMD);
+
+        if (num_read == BUF_CMD) {
+            buf[num_read-1] = '\0';
+        }
+        else {
+            buf[num_read] = '\0';
+        }
+
+        num_bytes = atoi(buf);
+
+        // allocate that number of bytes
+        data_buf = malloc(num_bytes);
+
+    }
+
+    // reset the fd set copy
+    all_cpy = all;
+
+    // client ready to send data file bytes
+    if ((FD_ISSET(note_client, &all_cpy)) && data_buf != NULL) {
+
+        // read the contents of data file
+        num_read = read(sock_fd, data_buf, num_bytes);  
+        // write to the data file
+        num_write = fwrite(data_buf, sizeof(data_buf) , 1, data_f);
+
+        fclose(data_f);
+
+        fprintf(stdout, "sucessfully cloned the data file\n");
+
+    }
+
+    // reset the fd set copy
+    all_cpy = all;
+    
+    // client ready to sned over the goodies
+    if (FD_ISSET(note_client, &all_cpy)) {
+
+
+        // read int
+        num_read = read(sock_fd, buf, BUF_CMD);
+
+        if (num_read == BUF_CMD) {
+            buf[num_read-1] = '\0';
+        }
+        else {
+            buf[num_read] = '\0';
+        }
+
+        num_bytes = atoi(buf);
+
+        // allocate that number of bytes
+        note_buf = malloc(num_bytes);
+
+    }
+
+    // reset the fd set copy
+    all_cpy = all;
+
+    // client ready to send data file bytes
+    if ((FD_ISSET(note_client, &all_cpy)) && note_buf != NULL) {
+
+        // read the contents of notes file
+        num_read = read(sock_fd, note_buf, num_bytes);  
+        // write to the data file
+        num_write = fwrite(note_buf, sizeof(note_buf) , 1, p_note_f);
+
+        fclose(p_note_f);
+
+        fprintf(stdout, "sucessfully cloned the notes\n");
+
+
+    }
+
+    fprintf(stdout, "transfer complete with client\n");
+
+}
+
+void client_bizness() {
+
+    char line[256];
+    char ips[MAX_IP][20];
+    int ports[MAX_IP];
+
+    // read the ips and ports from config file
+    FILE * config_f = fopen("./config.txt", "r");
+    if (config_f == NULL) {
+        perror("config file:");
+        e("nowhere to update the notes");
+    }
+    else {
+
+        // read the file line by line
+        int num_ips = 0;
+        while (fgets(line, sizeof(line), config_f)) {
+
+            if (num_ips >= 10) {
+                fprintf(stdout, "Only attempt to update the first 10 ips\n");
+                break;
+            }
+
+            
+            char * real_line = strtok(line, '\n');
+
+            char * addy = strtok(real_line, ',');
+            char * port = strtok(addy, ',');
+
+            strncpy(ips[num_ips], addy, 20);
+            ports[num_ips] = atoi(port);
+
+        }
+
+        // either 10 ips read or no more left to read
+
+        
+
+
+    }
+
+
+}

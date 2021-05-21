@@ -1,5 +1,5 @@
 CFLAGS = -g -Wall -std=gnu99
-FILES = notes s_notes data
+FILES = note s_notes data
 all: main
 
 main: main.c
