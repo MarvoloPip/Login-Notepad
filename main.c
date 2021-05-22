@@ -381,8 +381,6 @@ int main (int argc, char ** argv) {
 
             
             
-
-
             // reading num_usr times to see if usr alreayd exists
             for (int i = 0; i < num_usr; i++) {
 
@@ -438,10 +436,6 @@ int main (int argc, char ** argv) {
                 
 
             }
-
-
-        
-
         }
 
         if (!found) {
@@ -632,31 +626,7 @@ void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
     }
 
 
-    // // client ready to sned over the goodies
-    // if (FD_ISSET(note_client, &all_cpy)) {
-
-
-    //     // read int
-    //     num_read = read(note_client, &num_bytes, sizeof(int));
-
-    //     if (num_read < 0) {
-    //         perror("server:read");
-    //     }
-
-    //     // if (num_read == BUF_CMD) {
-    //     //     buf[num_read-1] = '\0';
-    //     // }
-    //     // else {
-    //     //     buf[num_read] = '\0';
-    //     // }
-
-    //     // num_bytes = atoi(buf);
-
-    //     // allocate that number of bytes
-    //     data_buf = malloc(num_bytes);
-
-    // }
-
+   
     // reset the fd set copy
     all_cpy = all;
 
@@ -670,15 +640,7 @@ void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
             perror("server:read");
         }
 
-        // if (num_read == BUF_CMD) {
-        //     buf[num_read-1] = '\0';
-        // }
-        // else {
-        //     buf[num_read] = '\0';
-        // }
-
-        // num_bytes = atoi(buf);
-
+        
         // allocate that number of bytes
         uds = malloc(sizeof(struct user_data));
 
@@ -697,7 +659,7 @@ void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
             num_write = fwrite(uds, sizeof(struct user_data), 1, data_f);
 
         }
-        fprintf(stdout, " \n read from client : %s %d\n", data_buf, num_bytes);
+        //fprintf(stdout, " \n read from client : %s %d\n", data_buf, num_bytes);
         // write to the data file
         //num_write = fwrite(data_buf, num_bytes, 1, data_f); 
         //num_write = fwrite(uds, sizeof(struct user_data), num_usr, data_f);
@@ -719,16 +681,7 @@ void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
         // read int
         num_read = read(note_client, &num_bytes, sizeof(int));
 
-        // if (num_read == BUF_CMD) {
-        //     buf[num_read-1] = '\0';
-        // }
-        // else {
-        //     buf[num_read] = '\0';
-        // }
-
-        //num_bytes = atoi(buf);
-
-        // allocate that number of bytes
+       
         note_buf = malloc(num_bytes);
 
     }
@@ -741,11 +694,11 @@ void conduct_bizness(int sock_fd, int max_fd, int note_client, fd_set all) {
 
         // read the contents of notes file
         num_read = read(note_client, note_buf, num_bytes);  
-        fprintf(stdout, "%d ", num_bytes);
+        //fprintf(stdout, "%d ", num_bytes);
 
         // write to the data file
         num_write = fwrite(note_buf, num_bytes , 1, p_note_f);
-        fprintf(stdout, "%s", note_buf);
+       // fprintf(stdout, "%s", note_buf);
 
         fclose(p_note_f);
 
@@ -779,7 +732,7 @@ void client_bizness(int num_usr) {
     FILE * config_f = fopen("./config.txt", "r");
     if (config_f == NULL) {
         perror("config file:");
-        e("nowhere to update the notes");
+        e("\nnowhere to update the notes\n");
     }
     else {
 
@@ -789,7 +742,7 @@ void client_bizness(int num_usr) {
         while (fgets(line, sizeof(line), config_f)) {
 
             if (num_ips >= 10) {
-                fprintf(stdout, "Only attempt to update the first 10 ips\n");
+                fprintf(stdout, "\nOnly attempt to update the first 10 ips\n");
                 break;
             }
 
@@ -883,7 +836,7 @@ void client_bizness(int num_usr) {
             
         }
 
-        fprintf(stdout, "Notes updated\n");
+        fprintf(stdout, "\nNotes updated\n");
 
         fclose(p_note_f);
         fclose(data_f);
