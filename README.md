@@ -18,8 +18,25 @@ You have two options here:
 
   In this case, you would enter your own user name. This will allow you to view notes that other people / or you yourself have written for you.
 
+*2.* If you want to read/edit notes for someone else
+
+  In this case, you would enter the name of the person that your notes are directed to, and add notes under their name so when they run the program, they can       enter their own name and read what others have written for them. 
 
 
+Next, multiple options will appear on the screen, displaying the your options
+```
+1) view (print your notes to stdout)
+2) add (add to your notes)
+3) quit (exit the program and update notes) 
+```
+**Detials**
+
+- *view*
+   Print the notes of user name provided to STDOUT
+- *add*
+   Add notes under this user name 
+- *quit*
+   Save the notes 
 
 **Overview**
 
