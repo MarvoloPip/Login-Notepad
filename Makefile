@@ -10,6 +10,6 @@ clean:
 	rm -f main
 	
 hard_clean: 
-	rm -f main notes data s_notes
+	rm -f main note data s_notes
 
 
