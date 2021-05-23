@@ -273,17 +273,17 @@ int main (int argc, char ** argv) {
     if (argc != 2) {
         // fprintf(stderr, "Usage: ./main username (uname has to be <= 20 chars)");
         // exit(1);
-        e("Usage: ./main <mode (server or client)>");
+        e("Usage: ./main <mode (recv or user)>");
     } 
 
-    if (strncmp(argv[1], "server", strlen("server")) == 0) {
+    if (strncmp(argv[1], "recv", strlen("recv")) == 0) {
         // its server
 
         server_bizness();
 
 
     }
-    else if (strncmp(argv[1], "client", strlen("client")) == 0) {
+    else if (strncmp(argv[1], "user", strlen("user")) == 0) {
         // its client
 
         // open files
