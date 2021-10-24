@@ -33,7 +33,7 @@ Next, multiple options will appear on the screen, displaying the your options
 2) add (add to your notes)
 3) quit (exit the program and update notes) 
 ```
-**Detials**
+**Details**
 
 - *view*
 
